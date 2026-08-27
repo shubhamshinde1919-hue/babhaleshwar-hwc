@@ -10,9 +10,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- SheetJS for Excel Download -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    
+    <!-- Official Firebase JS SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Mukta:wght@300;400;500;600;700;800&display=swap');
         * { font-family: 'Mukta', sans-serif; }
@@ -32,9 +34,8 @@
                 <div>
                     <div class="flex items-center gap-2">
                         <span class="bg-teal-950 text-teal-200 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded font-bold">आयुष्मान आरोग्य मंदिर</span>
-                        <!-- Live Connection Status Badge -->
                         <span id="cloudStatusBadge" class="bg-emerald-500/20 text-emerald-200 text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1.5 font-bold border border-emerald-400/40 shadow">
-                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Cloud Live Sync (जोडले आहे)
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Cloud Live Sync
                         </span>
                     </div>
                     <h1 class="text-xl md:text-2xl font-bold tracking-tight">उपकेंद्र बाभळेश्वर - मास्टर वर्कबुक डिजिटल पोर्टल</h1>
@@ -42,11 +43,7 @@
                 </div>
             </div>
 
-            <!-- Action Controls -->
             <div class="flex items-center gap-2 flex-wrap justify-center">
-                <button onclick="fetchLatestDataFromCloud(true)" class="bg-teal-900/80 hover:bg-teal-950 text-teal-100 border border-teal-500/50 text-xs px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow">
-                    <i class="fa-solid fa-rotate text-teal-300"></i> रीफ्रेश
-                </button>
                 <div id="adminBadge" class="hidden flex items-center gap-1.5 bg-emerald-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow">
                     <i class="fa-solid fa-shield-halved"></i> ॲडमिन मोड
                 </div>
@@ -76,7 +73,7 @@
                         <i class="fa-solid fa-chart-line text-teal-700"></i> सर्व शीट्सचे एकूण आकडेवारी सारांश (Master Statistics)
                     </h2>
                     <span class="text-xs text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded border border-emerald-200">
-                        <i class="fa-solid fa-cloud-arrow-up text-emerald-600"></i> Realtime Cloud Active
+                        <i class="fa-solid fa-cloud-arrow-up text-emerald-600"></i> Live Auto-Synced
                     </span>
                 </div>
                 <div id="dynamicStatsGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4"></div>
@@ -133,7 +130,7 @@
             </div>
         </section>
 
-        <!-- 2. REGISTER VIEW -->
+        <!-- 2. REGISTER / SHEET VIEW -->
         <section id="view-registers" class="hidden space-y-4">
             <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-3">
                 <div>
@@ -171,7 +168,7 @@
                         <tbody id="currentSheetBody" class="divide-y divide-slate-200"></tbody>
                     </table>
                 </div>
-                <div id="noSheetDataAlert" class="hidden p-8 text-center text-slate-400 text-xs font-medium">कोणतीही नोंद आढळली नाही.</div>
+                <div id="noSheetDataAlert" class="hidden p-8 text-center text-slate-400 text-xs font-medium">कोणतीही नोंद आढळली नाही. 'नवीन नोंद' वर क्लिक करून माहिती भरा.</div>
             </div>
         </section>
 
@@ -342,9 +339,14 @@
         </div>
     </div>
 
-    <!-- JAVASCRIPT DIRECT ENGINE (REST + WEBSOCKET DUAL ENGINE) -->
+    <!-- SCRIPT ENGINE -->
     <script>
-        const DB_BASE_URL = "https://sc-babhaleshwar-portal-default-rtdb.firebaseio.com/sc_babhaleshwar_portal.json";
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyDg6FD39DGe9Eksl9jzN8QYzHa3Z9mvHV4",
+            authDomain: "sc-babhaleshwar-portal.firebaseapp.com",
+            databaseURL: "https://sc-babhaleshwar-portal-default-rtdb.firebaseio.com",
+            projectId: "sc-babhaleshwar-portal"
+        };
 
         const INITIAL_MASTER_SCHEMA = {
             profile: {
@@ -421,61 +423,39 @@
         let isAdmin = localStorage.getItem('SC_PORTAL_IS_ADMIN') === 'true';
         let adminPin = localStorage.getItem('SC_PORTAL_ADMIN_PIN') || '1234';
         let currentTabKey = 'dashboard';
+        let dbRef = null;
 
-        // DIRECT CLOUD PUSH (100% Guaranteed REST Engine)
-        async function syncDataToCloudDirect(data) {
+        function initFirebase() {
             try {
-                const response = await fetch(DB_BASE_URL, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                if (response.ok) {
-                    setCloudBadge(true);
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(FIREBASE_CONFIG);
                 }
-            } catch (error) {
-                console.log("Direct sync note:", error);
-            }
-        }
-
-        // DIRECT CLOUD FETCH
-        async function fetchLatestDataFromCloud(showAlert = false) {
-            try {
-                const res = await fetch(DB_BASE_URL);
-                if (res.ok) {
-                    const remoteData = await res.json();
-                    if (remoteData && remoteData.sheets) {
-                        masterData = remoteData;
+                dbRef = firebase.database().ref('sc_babhaleshwar_portal');
+                
+                // Realtime Auto Listener
+                dbRef.on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data && data.sheets) {
+                        masterData = data;
                         localStorage.setItem('SC_PORTAL_MASTER_DATA', JSON.stringify(masterData));
                         renderHeaderAndProfile();
                         renderNavTabs();
                         if (currentTabKey === 'dashboard') renderDashboardStats();
                         else renderCurrentSheetView(currentTabKey);
-                        setCloudBadge(true);
-                        if (showAlert) alert("ताजा Cloud डेटा लोड झाला आहे!");
                     } else {
-                        // First run setup on cloud
-                        syncDataToCloudDirect(masterData);
-                        setCloudBadge(true);
+                        // First time populate
+                        dbRef.set(masterData);
                     }
-                }
+                });
             } catch (err) {
-                console.log("Fetch note:", err);
+                console.error("Firebase init error:", err);
             }
         }
 
-        function setCloudBadge(isLive) {
-            const badge = document.getElementById('cloudStatusBadge');
-            if (isLive) {
-                badge.className = "bg-emerald-500/20 text-emerald-200 text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1.5 font-bold border border-emerald-400/40 shadow";
-                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Cloud Live Sync (जोडले आहे)`;
-            }
-        }
-
-        function persistMasterData(syncCloud = true) {
+        function persistMasterData(syncToCloud = true) {
             localStorage.setItem('SC_PORTAL_MASTER_DATA', JSON.stringify(masterData));
-            if (syncCloud) {
-                syncDataToCloudDirect(masterData);
+            if (syncToCloud && dbRef) {
+                dbRef.set(masterData).catch(e => console.error("Cloud push err:", e));
             }
             renderHeaderAndProfile();
             renderNavTabs();
@@ -488,14 +468,7 @@
             renderNavTabs();
             renderDashboardStats();
             updateAdminUI();
-            
-            // Immediate Fetch from Cloud on Load
-            fetchLatestDataFromCloud();
-
-            // Auto Background Polling Every 5 Seconds to keep all devices live
-            setInterval(() => {
-                fetchLatestDataFromCloud(false);
-            }, 5000);
+            initFirebase();
         });
 
         function renderNavTabs() {
@@ -664,7 +637,7 @@
                             <i class="fa-solid fa-trash"></i> डिलीट
                         </button>
                     ` : `
-                        <span class="text-slate-400 text-[11px] italic"><i class="fa-solid fa-cloud-check text-emerald-600"></i> Cloud Synced</span>
+                        <span class="text-slate-400 text-[11px] italic"><i class="fa-solid fa-cloud-check text-emerald-600"></i> Synced</span>
                     `}
                 </td>`;
 
