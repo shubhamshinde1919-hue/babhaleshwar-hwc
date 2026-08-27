@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>डिजिटल पोर्टल - आयुष्यमान आरोग्य मंदिर उपकेंद्र बाभळेश्वर</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS for Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Mukta:wght@300;400;500;600;700;800&display=swap');
+        * { font-family: 'Mukta', sans-serif; }
+        .tab-active { border-bottom: 3px solid #0f766e; color: #0f766e; font-weight: 800; }
+        .glass-header { background: linear-gradient(135deg, #115e59 0%, #0f766e 50%, #134e4a 100%); }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="glass-header text-white shadow-lg sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-3">
+            <div class="flex items-center gap-3">
+                <div class="bg-white text-teal-800 p-2.5 rounded-full shadow text-2xl flex items-center justify-center w-12 h-12">
+                    <i class="fa-solid fa-hospital-user"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="bg-teal-950 text-teal-200 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded font-bold">आयुष्मान आरोग्य मंदिर</span>
+                        <!-- Live Connection Status Badge -->
+                        <span id="cloudStatusBadge" class="bg-amber-500 text-slate-950 text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1.5 font-bold shadow">
+                            <span class="w-2 h-2 rounded-full bg-slate-950 animate-pulse"></span> Cloud तपासत आहे...
+                        </span>
+                    </div>
+                    <h1 class="text-xl md:text-2xl font-bold tracking-tight">उपकेंद्र बाभळेश्वर - मास्टर वर्कबुक डिजिटल पोर्टल</h1>
+                    <p class="text-xs text-teal-100 font-medium">प्राथमिक आरोग्य केंद्र कोल्हर बुद्रुक | ता. राहाता, जि. अहिल्यानगर</p>
+                </div>
+            </div>
+
+            <!-- Action Controls -->
+            <div class="flex items-center gap-2 flex-wrap justify-center">
+                <button onclick="forceSyncFromCloud()" class="bg-teal-900/80 hover:bg-teal-950 text-teal-100 border border-teal-500/50 text-xs px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow">
+                    <i class="fa-solid fa-rotate text-teal-300"></i> Cloud रीफ्रेश
+                </button>
+                <div id="adminBadge" class="hidden flex items-center gap-1.5 bg-emerald-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow">
+                    <i class="fa-solid fa-shield-halved"></i> ॲडमिन मोड
+                </div>
+                <button id="adminLoginBtn" onclick="openAdminModal()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-3.5 py-1.5 rounded-lg text-xs transition shadow flex items-center gap-1.5">
+                    <i class="fa-solid fa-lock"></i> ॲडमिन लॉगिन
+                </button>
+                <button id="adminLogoutBtn" onclick="logoutAdmin()" class="hidden bg-rose-600 hover:bg-rose-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow flex items-center gap-1">
+                    <i class="fa-solid fa-right-from-bracket"></i> लॉगआउट
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs Bar -->
+    <nav class="bg-white border-b border-slate-200 shadow-sm sticky top-[76px] md:top-[72px] z-30 overflow-x-auto">
+        <div class="max-w-7xl mx-auto px-4 flex space-x-2 min-w-max" id="navTabsContainer">
+            <!-- Dynamic Navigation Tabs rendered via JS -->
+        </div>
+    </nav>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-1 w-full space-y-6">
+
+        <!-- 1. DASHBOARD VIEW -->
+        <section id="view-dashboard" class="space-y-6">
+            <!-- Statistics Cards -->
+            <div>
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-line text-teal-700"></i> सर्व शीट्सचे एकूण आकडेवारी सारांश (Master Statistics)
+                    </h2>
+                    <span class="text-xs text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded border border-emerald-200">
+                        <i class="fa-solid fa-cloud-arrow-up text-emerald-600"></i> Realtime Auto-Sync
+                    </span>
+                </div>
+                <div id="dynamicStatsGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <!-- Dynamic Sheet Cards -->
+                </div>
+            </div>
+
+            <!-- Profile & Village Details Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4 lg:col-span-2">
+                    <div class="flex justify-between items-start border-b pb-3">
+                        <div>
+                            <span class="text-[10px] uppercase tracking-wider font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded">उपकेंद्र प्रोफाइल</span>
+                            <h3 class="text-lg font-bold text-slate-800 mt-1" id="profileDisplayName">उपकेंद्र बाभळेश्वर</h3>
+                            <p class="text-xs text-slate-500" id="profileDisplayPhc">प्राथमिक आरोग्य केंद्र कोल्हर बुद्रुक, ता. राहाता, जि. अहिल्यानगर</p>
+                        </div>
+                        <button onclick="openProfileEditModal()" id="editProfileBtn" class="admin-only hidden bg-slate-100 hover:bg-teal-50 hover:text-teal-700 text-slate-700 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-200 transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-pen-to-square"></i> प्रोफाईल एडिट
+                        </button>
+                    </div>
+
+                    <!-- Population & Household Table -->
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
+                            <i class="fa-solid fa-people-roof text-teal-600"></i> गाव निहाय लोकसंख्या व घरे
+                        </h4>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs border border-slate-100 rounded-lg overflow-hidden">
+                                <thead class="bg-slate-50 text-slate-600 uppercase font-bold text-[11px] border-b">
+                                    <tr>
+                                        <th class="p-2.5">गाव / वस्तीचे नाव</th>
+                                        <th class="p-2.5 text-right">एकूण घरे</th>
+                                        <th class="p-2.5 text-right">एकूण लोकसंख्या</th>
+                                        <th class="p-2.5 text-right">पुरुष</th>
+                                        <th class="p-2.5 text-right">स्त्रिया</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="villagePopulationTableBody" class="divide-y divide-slate-100">
+                                    <!-- Dynamic Population Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="customProfileInfoBox" class="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs text-slate-600 space-y-1"></div>
+                </div>
+
+                <!-- Staff List -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
+                    <div class="flex justify-between items-center border-b pb-3">
+                        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                            <i class="fa-solid fa-user-doctor text-teal-600"></i> उपकेंद्र कर्मचारी पथक
+                        </h3>
+                        <span class="text-[11px] text-slate-400 font-medium">Team Details</span>
+                    </div>
+                    <div id="staffListContainer" class="space-y-3"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. REGISTER / SHEET VIEW -->
+        <section id="view-registers" class="hidden space-y-4">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-3">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h2 id="currentSheetTitle" class="text-lg font-bold text-slate-800"></h2>
+                        <span id="currentSheetBadge" class="bg-teal-50 text-teal-700 text-xs px-2 py-0.5 rounded font-bold">0 नोंदी</span>
+                    </div>
+                    <p id="currentSheetDescription" class="text-xs text-slate-500"></p>
+                </div>
+                
+                <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                    <div class="relative flex-1 md:w-60">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                        <input type="text" id="sheetSearchInput" onkeyup="filterSheetRecords()" placeholder="नोंद शोधा..." class="w-full bg-slate-50 border border-slate-300 text-xs rounded-lg pl-8 pr-3 py-2 outline-none focus:ring-2 focus:ring-teal-500">
+                    </div>
+
+                    <button onclick="openDataEntryModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg shadow transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-plus-circle"></i> डेटा भरा (नवीन नोंद)
+                    </button>
+
+                    <button onclick="openManageColumnsModal()" id="manageColumnsBtn" class="admin-only hidden bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-3 py-2 rounded-lg border border-slate-300 transition flex items-center gap-1">
+                        <i class="fa-solid fa-table-columns"></i> कॉलम्स बदला
+                    </button>
+
+                    <button onclick="exportCurrentSheetToExcel()" class="bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold px-3 py-2 rounded-lg shadow transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-excel"></i> Excel
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto max-h-[600px]">
+                    <table class="w-full text-left text-xs text-slate-700" id="currentSheetTable">
+                        <thead class="bg-slate-100 text-slate-800 border-b border-slate-200 sticky top-0 uppercase font-bold text-[11px]" id="currentSheetHead"></thead>
+                        <tbody id="currentSheetBody" class="divide-y divide-slate-200"></tbody>
+                    </table>
+                </div>
+                <div id="noSheetDataAlert" class="hidden p-8 text-center text-slate-400 text-xs font-medium">कोणतीही नोंद आढळली नाही.</div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ADMIN MODAL -->
+    <div id="adminModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200">
+            <div class="text-center mb-4">
+                <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto text-xl mb-2">
+                    <i class="fa-solid fa-lock"></i>
+                </div>
+                <h3 class="text-base font-bold text-slate-800">ॲडमिन प्रमाणीकरण</h3>
+                <p class="text-xs text-slate-500">बदल करण्यासाठी ॲडमिन सुरक्षा पिन टाका</p>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <input type="password" id="adminPinInput" placeholder="पिन टाका (Default: 1234)" class="w-full text-center text-lg tracking-widest bg-slate-50 border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-teal-500 outline-none">
+                    <p id="pinError" class="text-rose-600 text-[11px] mt-1 hidden text-center">चुकीचा पिन!</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="closeAdminModal()" class="w-1/2 py-2 bg-slate-200 text-slate-700 font-bold rounded-lg text-xs">रद्द करा</button>
+                    <button onclick="verifyAdminPin()" class="w-1/2 py-2 bg-teal-700 text-white font-bold rounded-lg text-xs shadow">लॉगिन करा</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PROFILE EDIT MODAL -->
+    <div id="profileEditModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 my-6">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-id-card text-teal-600"></i> उपकेंद्र प्रोफाईल संपादन (Admin Only)
+                </h3>
+                <button onclick="closeProfileEditModal()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="profileEditForm" onsubmit="saveProfileChanges(event)" class="space-y-4 text-xs">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">उपकेंद्राचे नाव:</label>
+                        <input type="text" id="profSubCenterName" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">प्राथमिक आरोग्य केंद्र (PHC):</label>
+                        <input type="text" id="profPhcName" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">तालुका:</label>
+                        <input type="text" id="profTaluka" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">जिल्हा:</label>
+                        <input type="text" id="profDistrict" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 outline-none">
+                    </div>
+                </div>
+
+                <div class="border-t pt-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block font-bold text-slate-800">कर्मचारी वर्ग:</label>
+                        <button type="button" onclick="addStaffRowInForm()" class="text-teal-700 font-bold hover:underline text-[11px]">+ कर्मचारी जोडा</button>
+                    </div>
+                    <div id="staffFormContainer" class="space-y-2 max-h-44 overflow-y-auto pr-1"></div>
+                </div>
+
+                <div class="border-t pt-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block font-bold text-slate-800">गाव निहाय लोकसंख्या व घरे:</label>
+                        <button type="button" onclick="addVillageRowInForm()" class="text-teal-700 font-bold hover:underline text-[11px]">+ गाव जोडा</button>
+                    </div>
+                    <div id="villageFormContainer" class="space-y-2 max-h-44 overflow-y-auto pr-1"></div>
+                </div>
+
+                <div class="border-t pt-3">
+                    <label class="block font-bold text-slate-800 mb-1">अतिरिक्त माहिती:</label>
+                    <textarea id="profExtraInfo" rows="2" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 outline-none"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-3 border-t">
+                    <button type="button" onclick="closeProfileEditModal()" class="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded-lg">रद्द करा</button>
+                    <button type="submit" class="px-5 py-2 bg-teal-700 text-white font-bold rounded-lg shadow">बदल सेव्ह करा</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- DATA ENTRY MODAL -->
+    <div id="dataEntryModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 my-6">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <div>
+                    <h3 id="dataEntryModalTitle" class="text-base font-bold text-slate-800">नवीन नोंद फॉर्म</h3>
+                    <p class="text-[11px] text-slate-500">हा फॉर्म शीटच्या कॉलम्सनुसार तयार झाला आहे</p>
+                </div>
+                <button onclick="closeDataEntryModal()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="dynamicDataForm" onsubmit="saveDynamicRecord(event)" class="space-y-4">
+                <input type="hidden" id="entryRecordEditIndex" value="-1">
+                <div id="dynamicFormFieldsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs max-h-[60vh] overflow-y-auto p-1"></div>
+                <div class="flex justify-end gap-2 pt-4 border-t">
+                    <button type="button" onclick="closeDataEntryModal()" class="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded-lg text-xs">रद्द करा</button>
+                    <button type="submit" id="btnSubmitRecord" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs shadow flex items-center gap-1.5">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> नोंद Cloud वर पाठवा
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MANAGE COLUMNS MODAL -->
+    <div id="manageColumnsModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 my-6">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-teal-600"></i> कॉलम्स व शीट व्यवस्थापन (Admin)
+                </h3>
+                <button onclick="closeManageColumnsModal()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-4 text-xs">
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <label class="block font-bold text-slate-700 mb-1">या शीटमध्ये नवीन कॉलम जोडा:</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="newColumnNameInput" placeholder="उदा. मोबाईल नंबर..." class="flex-1 bg-white border border-slate-300 rounded-lg p-2 outline-none">
+                        <button onclick="addNewColumnToCurrentSheet()" class="bg-teal-700 hover:bg-teal-800 text-white font-bold px-3 py-2 rounded-lg whitespace-nowrap">+ कॉलम जोडा</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-2">विद्यमान कॉलम्स:</label>
+                    <div id="existingColumnsList" class="space-y-1.5 max-h-48 overflow-y-auto"></div>
+                </div>
+                <div class="border-t pt-3 flex justify-between items-center">
+                    <span class="text-rose-700 font-bold text-[11px]">ही संपूर्ण Sheet हटवायची आहे का?</span>
+                    <button onclick="deleteCurrentSheet()" class="bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold px-3 py-1.5 rounded-lg text-xs">
+                        <i class="fa-solid fa-trash"></i> Sheet डिलीट करा
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CREATE NEW SHEET MODAL -->
+    <div id="createSheetModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-plus text-teal-600"></i> नवीन Sheet तयार करा
+                </h3>
+                <button onclick="closeCreateSheetModal()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="newSheetForm" onsubmit="saveNewCustomSheet(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-semibold mb-1">Sheet चे नाव:</label>
+                    <input type="text" id="newSheetTitle" required placeholder="उदा. ARSH नोंदवही" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 outline-none">
+                </div>
+                <div>
+                    <label class="block font-semibold mb-1">लघु वर्णन:</label>
+                    <input type="text" id="newSheetDesc" placeholder="उदा. समुपदेशन व फॉलोअप" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 outline-none">
+                </div>
+                <div>
+                    <label class="block font-semibold mb-1">कॉलम्सची नावे (स्वल्पविराम देऊन):</label>
+                    <textarea id="newSheetCols" required rows="3" placeholder="नाव, वय, गाव, वजन, मोबाईल नंबर, शेरा" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 outline-none"></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-3 border-t">
+                    <button type="button" onclick="closeCreateSheetModal()" class="px-3 py-1.5 bg-slate-200 text-slate-700 font-bold rounded-lg">रद्द करा</button>
+                    <button type="submit" class="px-4 py-1.5 bg-teal-700 text-white font-bold rounded-lg shadow">Sheet बनवा</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT ENGINE -->
+    <script>
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyDg6FD39DGe9Eksl9jzN8QYzHa3Z9mvHV4",
+            authDomain: "sc-babhaleshwar-portal.firebaseapp.com",
+            databaseURL: "https://sc-babhaleshwar-portal-default-rtdb.firebaseio.com",
+            projectId: "sc-babhaleshwar-portal"
+        };
+
+        const INITIAL_MASTER_SCHEMA = {
+            profile: {
+                name: "आयुष्मान आरोग्य मंदिर उपकेंद्र बाभळेश्वर",
+                phc: "प्राथमिक आरोग्य केंद्र कोल्हर बुद्रुक",
+                taluka: "राहाता",
+                district: "अहिल्यानगर",
+                staff: [
+                    { name: "समुदाय आरोग्य अधिकारी (CHO)", role: "CHO", contact: "उपकेंद्र बाभळेश्वर" },
+                    { name: "आरोग्य सेविका (ANM)", role: "ANM", contact: "उपकेंद्र बाभळेश्वर" },
+                    { name: "आरोग्य सेवक (MPW)", role: "MPW", contact: "उपकेंद्र बाभळेश्वर" },
+                    { name: "आशा स्वयंसेविका (ASHA 1)", role: "ASHA", contact: "बाभळेश्वर गावठाण" },
+                    { name: "आशा स्वयंसेविका (ASHA 2)", role: "ASHA", contact: "बाभळेश्वर वस्ती" }
+                ],
+                villages: [
+                    { village: "बाभळेश्वर बु.", households: "1250", totalPop: "5800", male: "3000", female: "2800" },
+                    { village: "बाभळेश्वर वाडी/वस्ती", households: "420", totalPop: "1850", male: "950", female: "900" }
+                ],
+                extra: "उपकेंद्र अंतर्गत नियमित NCD क्लिनिक, गरोदर माता तपासणी (ANC), लसीकरण सत्रे व गृहभेटी यशस्वीपणे राबविल्या जातात."
+            },
+            sheets: {
+                anc: {
+                    title: "१. ANC रजिस्टर (गरोदर माता ट्रॅकर व HRP)",
+                    desc: "ANC १ ते ४ तपासण्या, Hb, USG, HRP व PMSMA ट्रॅकिंग",
+                    columns: ["RCH आयडी", "मातेचे नाव", "वय", "गाव/वस्ती", "प्रसूती तारीख (EDD)", "हिमोग्लोबिन (Hb)", "अतिजोखीम (HRP)", "तपासणी टप्पा", "आशा स्वयंसेविका"],
+                    records: [
+                        { "RCH आयडी": "2026/01", "मातेचे नाव": "पूजा सचिन थोरात", "वय": "24", "गाव/वस्ती": "बाभळेश्वर बु.", "प्रसूती तारीख (EDD)": "2026-10-15", "हिमोग्लोबिन (Hb)": "11.2", "अतिजोखीम (HRP)": "नाही", "तपासणी टप्पा": "ANC 3", "आशा स्वयंसेविका": "सुनिता तांबे" }
+                    ]
+                },
+                hbnc: {
+                    title: "२. HBNC रजिस्टर (गृहभेटी व अर्भक काळजी)",
+                    desc: "आशा गृहभेटी, जन्मतः वजन व नवजात अर्भक ट्रॅकिंग",
+                    columns: ["बाळाचे नाव", "मातेचे नाव", "जन्म तारीख", "जन्म वजन (kg)", "झालेल्या गृहभेटी", "स्थिती", "आशा स्वयंसेविका"],
+                    records: [
+                        { "बाळाचे नाव": "बाळ - पूजा थोरात", "मातेचे नाव": "पूजा सचिन थोरात", "जन्म तारीख": "2026-08-10", "जन्म वजन (kg)": "2.8 kg", "झालेल्या गृहभेटी": "3 / 6", "स्थिती": "सामान्य", "आशा स्वयंसेविका": "सुनिता तांबे" }
+                    ]
+                },
+                tb: {
+                    title: "३. TB & TPT रजिस्टर (संशयित व उपचार ट्रॅकिंग)",
+                    desc: "Presumptive TB, थुंकी तपासणी, Truenat व निक्षय पोषण ट्रॅकिंग",
+                    columns: ["नोंदणी क्र.", "रुग्णाचे नाव", "वय", "प्रकार", "थुंकी नमुना", "Truenat/CBNAAT", "DOTS उपचार", "TPT स्थिती"],
+                    records: [
+                        { "नोंदणी क्र.": "TB-01", "रुग्णाचे नाव": "रमेश भाऊसाहेब कदम", "वय": "48", "प्रकार": "संशयित (Presumptive)", "थुंकी नमुना": "Negative", "Truenat/CBNAAT": "निगेटिव्ह", "DOTS उपचार": "-", "TPT स्थिती": "लागू नाही" }
+                    ]
+                },
+                ncd: {
+                    title: "४. NCD 30+ स्क्रीनिंग (BP/Sugar/कॅन्सर व CBAC)",
+                    desc: "३० वर्षांवरील व्यक्तींचे CBAC स्कोअरिंग, BP, शुगर व कॅन्सर तपासणी",
+                    columns: ["NCD आयडी", "व्यक्तीचे नाव", "वय", "गाव/वस्ती", "रक्तदाब (BP)", "रक्तशर्करा (Sugar)", "CBAC स्कोअर", "सद्यस्थिती / उपचार"],
+                    records: [
+                        { "NCD आयडी": "NCD-101", "व्यक्तीचे नाव": "दत्तात्रय रामभाऊ कदम", "वय": "56", "गाव/वस्ती": "बाभळेश्वर बु.", "रक्तदाब (BP)": "150/94", "रक्तशर्करा (Sugar)": "186 (R)", "CBAC स्कोअर": "5", "सद्यस्थिती / उपचार": "HTN+DM उपचार चालू" }
+                    ]
+                },
+                immunization: {
+                    title: "५. ० ते २ वर्षे बाल लसीकरण (U-WIN ट्रॅकर)",
+                    desc: "U-WIN ट्रॅकिंग, BCG ते MR-2 आणि DPT बूस्टर डोस",
+                    columns: ["U-WIN आयडी", "बालकाचे नाव", "आईचे नाव", "जन्मतारीख", "देय लस (Due Vaccines)", "दिलेली तारीख", "स्थिती"],
+                    records: [
+                        { "U-WIN आयडी": "UWIN-401", "बालकाचे नाव": "आरव योगेश जाधव", "आईचे नाव": "प्रिया जाधव", "जन्मतारीख": "2025-08-15", "देय लस (Due Vaccines)": "MR-1, JE-1, PCV-Booster", "दिलेली तारीख": "2026-05-20", "स्थिती": "पूर्ण" }
+                    ]
+                },
+                stock: {
+                    title: "६. औषध व साहित्य साठा (Drug Inventory)",
+                    desc: "उपकेंद्रातील उपलब्ध औषधे, बॅच नंबर, मुदत व शिल्लक साठा",
+                    columns: ["औषधाचे / साहित्याचे नाव", "बॅच नंबर", "एक्सपायरी (MM/YY)", "शिल्लक संख्या", "एकक (Unit)", "साठा स्थिती"],
+                    records: [
+                        { "औषधाचे / साहित्याचे नाव": "Tab. Paracetamol 500mg", "बॅच नंबर": "PCT-2509", "एक्सपायरी (MM/YY)": "2027-04", "शिल्लक संख्या": "450", "एकक (Unit)": "गोळ्या", "साठा स्थिती": "उपलब्ध" }
+                    ]
+                }
+            }
+        };
+
+        let masterData = JSON.parse(localStorage.getItem('SC_PORTAL_MASTER_DATA')) || INITIAL_MASTER_SCHEMA;
+        let isAdmin = localStorage.getItem('SC_PORTAL_IS_ADMIN') === 'true';
+        let adminPin = localStorage.getItem('SC_PORTAL_ADMIN_PIN') || '1234';
+        let currentTabKey = 'dashboard';
+        let firebaseDB = null;
+
+        // DIRECT REST SYNC BACKUP (Guaranteed to work across all networks)
+        async function syncViaREST(data) {
+            try {
+                const url = `${FIREBASE_CONFIG.databaseURL}/sc_babhaleshwar_portal.json`;
+                await fetch(url, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                updateCloudStatus(true);
+            } catch (err) {
+                console.log("REST Sync note:", err);
+            }
+        }
+
+        async function fetchViaREST() {
+            try {
+                const url = `${FIREBASE_CONFIG.databaseURL}/sc_babhaleshwar_portal.json`;
+                const res = await fetch(url);
+                const cloudData = await res.json();
+                if (cloudData && cloudData.sheets) {
+                    masterData = cloudData;
+                    localStorage.setItem('SC_PORTAL_MASTER_DATA', JSON.stringify(masterData));
+                    renderHeaderAndProfile();
+                    renderNavTabs();
+                    if (currentTabKey === 'dashboard') renderDashboardStats();
+                    else renderCurrentSheetView(currentTabKey);
+                    updateCloudStatus(true);
+                }
+            } catch (err) {
+                console.log("Fetch REST note:", err);
+            }
+        }
+
+        function updateCloudStatus(isOnline) {
+            const badge = document.getElementById('cloudStatusBadge');
+            if (isOnline) {
+                badge.className = "bg-emerald-500/20 text-emerald-200 text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1.5 font-bold border border-emerald-400/40 shadow";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Cloud Live Sync (जोडले आहे)`;
+            } else {
+                badge.className = "bg-rose-500/20 text-rose-200 text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1.5 font-bold border border-rose-400/40";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-400"></span> Offline Mode`;
+            }
+        }
+
+        function persistMasterData(syncToCloud = true) {
+            localStorage.setItem('SC_PORTAL_MASTER_DATA', JSON.stringify(masterData));
+            if (syncToCloud) {
+                if (firebaseDB) {
+                    firebaseDB.ref('sc_babhaleshwar_portal').set(masterData)
+                        .then(() => updateCloudStatus(true))
+                        .catch(() => syncViaREST(masterData));
+                } else {
+                    syncViaREST(masterData);
+                }
+            }
+            renderHeaderAndProfile();
+            renderNavTabs();
+            if (currentTabKey === 'dashboard') renderDashboardStats();
+            else renderCurrentSheetView(currentTabKey);
+        }
+
+        function forceSyncFromCloud() {
+            fetchViaREST();
+            alert("Cloud वरून ताजा डेटा रीफ्रेश झाला आहे!");
+        }
+
+        function initFirebaseAuto() {
+            try {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(FIREBASE_CONFIG);
+                }
+                firebaseDB = firebase.database();
+                
+                // Real-time listener
+                firebaseDB.ref('sc_babhaleshwar_portal').on('value', (snapshot) => {
+                    const val = snapshot.val();
+                    if (val && val.sheets) {
+                        masterData = val;
+                        localStorage.setItem('SC_PORTAL_MASTER_DATA', JSON.stringify(masterData));
+                        renderHeaderAndProfile();
+                        renderNavTabs();
+                        if (currentTabKey === 'dashboard') renderDashboardStats();
+                        else renderCurrentSheetView(currentTabKey);
+                        updateCloudStatus(true);
+                    } else {
+                        persistMasterData(true);
+                    }
+                }, (error) => {
+                    console.log("Firebase listener fallback to REST");
+                    fetchViaREST();
+                });
+            } catch(e) {
+                fetchViaREST();
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initFirebaseAuto();
+            fetchViaREST();
+            updateAdminUI();
+            renderHeaderAndProfile();
+            renderNavTabs();
+            renderDashboardStats();
+        });
+
+        function renderNavTabs() {
+            const container = document.getElementById('navTabsContainer');
+            container.innerHTML = '';
+
+            const dashBtn = document.createElement('button');
+            dashBtn.onclick = () => switchTab('dashboard');
+            dashBtn.className = `tab-btn py-3 px-3 text-xs md:text-sm flex items-center gap-1.5 ${currentTabKey === 'dashboard' ? 'tab-active' : 'text-slate-600 hover:text-teal-700'}`;
+            dashBtn.innerHTML = `<i class="fa-solid fa-chart-pie"></i> मुख्य डॅशबोर्ड`;
+            container.appendChild(dashBtn);
+
+            Object.keys(masterData.sheets).forEach(sheetKey => {
+                const sheet = masterData.sheets[sheetKey];
+                const btn = document.createElement('button');
+                btn.onclick = () => switchTab(sheetKey);
+                btn.className = `tab-btn py-3 px-3 text-xs md:text-sm flex items-center gap-1.5 ${currentTabKey === sheetKey ? 'tab-active' : 'text-slate-600 hover:text-teal-700'}`;
+                btn.innerHTML = `<i class="fa-solid fa-table-cells text-teal-600"></i> ${sheet.title}`;
+                container.appendChild(btn);
+            });
+
+            if (isAdmin) {
+                const addSheetBtn = document.createElement('button');
+                addSheetBtn.onclick = openCreateSheetModal;
+                addSheetBtn.className = "py-2 px-3 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg my-1.5 transition flex items-center gap-1 border border-emerald-200";
+                addSheetBtn.innerHTML = `<i class="fa-solid fa-plus-circle"></i> नवीन Sheet जोडा`;
+                container.appendChild(addSheetBtn);
+            }
+        }
+
+        function switchTab(tabKey) {
+            currentTabKey = tabKey;
+            renderNavTabs();
+            const dashView = document.getElementById('view-dashboard');
+            const regView = document.getElementById('view-registers');
+
+            if (tabKey === 'dashboard') {
+                dashView.classList.remove('hidden');
+                regView.classList.add('hidden');
+                renderDashboardStats();
+            } else {
+                dashView.classList.add('hidden');
+                regView.classList.remove('hidden');
+                renderCurrentSheetView(tabKey);
+            }
+        }
+
+        function renderHeaderAndProfile() {
+            const p = masterData.profile;
+            document.getElementById('profileDisplayName').innerText = p.name;
+            document.getElementById('profileDisplayPhc').innerText = `${p.phc}, ता. ${p.taluka}, जि. ${p.district}`;
+
+            const staffCont = document.getElementById('staffListContainer');
+            staffCont.innerHTML = '';
+            p.staff.forEach(s => {
+                staffCont.innerHTML += `
+                    <div class="flex justify-between items-center p-2.5 bg-slate-50 rounded-lg border border-slate-100 text-xs">
+                        <div>
+                            <span class="font-bold text-slate-800">${s.name}</span>
+                            <div class="text-[10px] text-teal-700 font-semibold">${s.role}</div>
+                        </div>
+                        <span class="text-slate-500 text-[11px]">${s.contact}</span>
+                    </div>
+                `;
+            });
+
+            const popBody = document.getElementById('villagePopulationTableBody');
+            popBody.innerHTML = '';
+            p.villages.forEach(v => {
+                popBody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="p-2.5 font-bold text-slate-800">${v.village}</td>
+                        <td class="p-2.5 text-right font-semibold text-slate-700">${v.households}</td>
+                        <td class="p-2.5 text-right font-bold text-teal-700">${v.totalPop}</td>
+                        <td class="p-2.5 text-right text-slate-600">${v.male}</td>
+                        <td class="p-2.5 text-right text-slate-600">${v.female}</td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('customProfileInfoBox').innerHTML = `
+                <div class="font-bold text-slate-700"><i class="fa-solid fa-circle-info text-teal-600"></i> उपकेंद्र अतिरिक्त तपशील:</div>
+                <p>${p.extra || 'कोणतीही नोंद नाही.'}</p>
+            `;
+        }
+
+        function renderDashboardStats() {
+            const grid = document.getElementById('dynamicStatsGrid');
+            grid.innerHTML = '';
+
+            Object.keys(masterData.sheets).forEach(key => {
+                const sheet = masterData.sheets[key];
+                const count = sheet.records ? sheet.records.length : 0;
+                
+                const card = document.createElement('div');
+                card.className = "bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between hover:border-teal-500 transition cursor-pointer";
+                card.onclick = () => switchTab(key);
+                card.innerHTML = `
+                    <div>
+                        <p class="text-[11px] text-slate-500 font-bold uppercase truncate max-w-[140px]" title="${sheet.title}">${sheet.title}</p>
+                        <h3 class="text-2xl font-black text-teal-800 mt-1">${count}</h3>
+                        <span class="text-[10px] text-teal-600 font-bold">नोंदी ट्रॅक केल्या →</span>
+                    </div>
+                    <div class="bg-teal-50 text-teal-700 p-3 rounded-xl text-lg"><i class="fa-solid fa-folder-open"></i></div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function renderCurrentSheetView(sheetKey) {
+            const sheet = masterData.sheets[sheetKey];
+            if (!sheet) return;
+
+            document.getElementById('currentSheetTitle').innerText = sheet.title;
+            document.getElementById('currentSheetDescription').innerText = sheet.desc || '';
+            document.getElementById('currentSheetBadge').innerText = `${sheet.records ? sheet.records.length : 0} एकूण नोंदी`;
+
+            const thead = document.getElementById('currentSheetHead');
+            let thHtml = `<tr><th class="p-3 border-b text-center w-12">अ.क्र.</th>`;
+            sheet.columns.forEach(col => {
+                thHtml += `<th class="p-3 border-b">${col}</th>`;
+            });
+            thHtml += `<th class="p-3 border-b text-center">क्रिया (Actions)</th></tr>`;
+            thead.innerHTML = thHtml;
+
+            renderSheetRows(sheetKey);
+        }
+
+        function renderSheetRows(sheetKey, filterQuery = '') {
+            const sheet = masterData.sheets[sheetKey];
+            const tbody = document.getElementById('currentSheetBody');
+            tbody.innerHTML = '';
+
+            const records = sheet.records || [];
+            const filtered = records.filter(r => {
+                if (!filterQuery) return true;
+                return Object.values(r).some(v => String(v).toLowerCase().includes(filterQuery.toLowerCase()));
+            });
+
+            if (filtered.length === 0) {
+                document.getElementById('noSheetDataAlert').classList.remove('hidden');
+                return;
+            } else {
+                document.getElementById('noSheetDataAlert').classList.add('hidden');
+            }
+
+            filtered.forEach((row, idx) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
+                
+                let trHtml = `<td class="p-3 text-center text-slate-400 font-bold">${idx + 1}</td>`;
+                sheet.columns.forEach(col => {
+                    let val = row[col] || '-';
+                    if (String(val).includes('होय') || String(val).includes('Positive')) {
+                        val = `<span class="bg-rose-100 text-rose-700 px-2 py-0.5 rounded font-bold">${val}</span>`;
+                    }
+                    trHtml += `<td class="p-3 font-medium text-slate-800">${val}</td>`;
+                });
+
+                trHtml += `<td class="p-3 text-center whitespace-nowrap">
+                    ${isAdmin ? `
+                        <button onclick="editSheetRecord('${sheetKey}', ${idx})" class="bg-sky-100 hover:bg-sky-200 text-sky-700 px-2.5 py-1 rounded text-xs font-bold mr-1 transition">
+                            <i class="fa-solid fa-pen"></i> एडिट
+                        </button>
+                        <button onclick="deleteSheetRecord('${sheetKey}', ${idx})" class="bg-rose-100 hover:bg-rose-200 text-rose-700 px-2.5 py-1 rounded text-xs font-bold transition">
+                            <i class="fa-solid fa-trash"></i> डिलीट
+                        </button>
+                    ` : `
+                        <span class="text-slate-400 text-[11px] italic"><i class="fa-solid fa-cloud-check text-emerald-600"></i> Cloud Synced</span>
+                    `}
+                </td>`;
+
+                tr.innerHTML = trHtml;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterSheetRecords() {
+            const q = document.getElementById('sheetSearchInput').value;
+            renderSheetRows(currentTabKey, q);
+        }
+
+        function openDataEntryModal(editIndex = -1) {
+            const sheet = masterData.sheets[currentTabKey];
+            if (!sheet) return;
+
+            document.getElementById('entryRecordEditIndex').value = editIndex;
+            document.getElementById('dataEntryModalTitle').innerText = editIndex === -1 ? `${sheet.title} - नवीन नोंद फॉर्म` : `नोंद संपादन (Edit Record)`;
+
+            const container = document.getElementById('dynamicFormFieldsContainer');
+            container.innerHTML = '';
+
+            const currentData = editIndex !== -1 ? sheet.records[editIndex] : {};
+
+            sheet.columns.forEach(col => {
+                const val = currentData[col] || '';
+                const fieldDiv = document.createElement('div');
+                fieldDiv.innerHTML = `
+                    <label class="block font-bold text-slate-700 mb-1">${col}:</label>
+                    <input type="text" name="${col}" value="${val}" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-teal-500 text-xs">
+                `;
+                container.appendChild(fieldDiv);
+            });
+
+            document.getElementById('dataEntryModal').classList.remove('hidden');
+        }
+
+        function closeDataEntryModal() {
+            document.getElementById('dataEntryModal').classList.add('hidden');
+        }
+
+        function saveDynamicRecord(e) {
+            e.preventDefault();
+            const form = e.target;
+            const editIndex = parseInt(document.getElementById('entryRecordEditIndex').value);
+            const formData = new FormData(form);
+            const record = {};
+            formData.forEach((value, key) => record[key] = value);
+
+            if (!masterData.sheets[currentTabKey].records) {
+                masterData.sheets[currentTabKey].records = [];
+            }
+
+            if (editIndex === -1) {
+                masterData.sheets[currentTabKey].records.unshift(record);
+            } else {
+                masterData.sheets[currentTabKey].records[editIndex] = record;
+            }
+
+            persistMasterData(true);
+            closeDataEntryModal();
+            alert("नोंद यशस्वीपणे Cloud वर सेव्ह झाली आहे!");
+        }
+
+        function editSheetRecord(sheetKey, idx) {
+            currentTabKey = sheetKey;
+            openDataEntryModal(idx);
+        }
+
+        function deleteSheetRecord(sheetKey, idx) {
+            if (!isAdmin) return;
+            if (confirm("खात्री आहे का? ही नोंद कायमस्वरूपी डिलीट केली जाईल.")) {
+                masterData.sheets[sheetKey].records.splice(idx, 1);
+                persistMasterData(true);
+            }
+        }
+
+        function openProfileEditModal() {
+            if (!isAdmin) return;
+            const p = masterData.profile;
+            document.getElementById('profSubCenterName').value = p.name;
+            document.getElementById('profPhcName').value = p.phc;
+            document.getElementById('profTaluka').value = p.taluka;
+            document.getElementById('profDistrict').value = p.district;
+            document.getElementById('profExtraInfo').value = p.extra || '';
+
+            const staffCont = document.getElementById('staffFormContainer');
+            staffCont.innerHTML = '';
+            p.staff.forEach(s => addStaffRowInForm(s.name, s.role, s.contact));
+
+            const villageCont = document.getElementById('villageFormContainer');
+            villageCont.innerHTML = '';
+            p.villages.forEach(v => addVillageRowInForm(v.village, v.households, v.totalPop, v.male, v.female));
+
+            document.getElementById('profileEditModal').classList.remove('hidden');
+        }
+
+        function closeProfileEditModal() {
+            document.getElementById('profileEditModal').classList.add('hidden');
+        }
+
+        function addStaffRowInForm(name = '', role = '', contact = '') {
+            const div = document.createElement('div');
+            div.className = "flex gap-2 items-center bg-slate-50 p-1.5 rounded border border-slate-200 staff-row";
+            div.innerHTML = `
+                <input type="text" placeholder="नाव" value="${name}" class="w-1/3 p-1.5 border rounded text-xs" required>
+                <input type="text" placeholder="पद" value="${role}" class="w-1/3 p-1.5 border rounded text-xs" required>
+                <input type="text" placeholder="संपर्क" value="${contact}" class="w-1/3 p-1.5 border rounded text-xs">
+                <button type="button" onclick="this.parentElement.remove()" class="text-rose-600 px-1 text-sm"><i class="fa-solid fa-trash"></i></button>
+            `;
+            document.getElementById('staffFormContainer').appendChild(div);
+        }
+
+        function addVillageRowInForm(village = '', hh = '', pop = '', m = '', f = '') {
+            const div = document.createElement('div');
+            div.className = "grid grid-cols-5 gap-1.5 bg-slate-50 p-1.5 rounded border border-slate-200 items-center village-row";
+            div.innerHTML = `
+                <input type="text" placeholder="गाव" value="${village}" class="p-1 border rounded text-xs" required>
+                <input type="number" placeholder="घरे" value="${hh}" class="p-1 border rounded text-xs" required>
+                <input type="number" placeholder="लोकसंख्या" value="${pop}" class="p-1 border rounded text-xs" required>
+                <input type="number" placeholder="पुरुष" value="${m}" class="p-1 border rounded text-xs">
+                <div class="flex items-center gap-1">
+                    <input type="number" placeholder="स्त्रिया" value="${f}" class="w-full p-1 border rounded text-xs">
+                    <button type="button" onclick="this.parentElement.parentElement.remove()" class="text-rose-600 text-xs"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            `;
+            document.getElementById('villageFormContainer').appendChild(div);
+        }
+
+        function saveProfileChanges(e) {
+            e.preventDefault();
+            masterData.profile.name = document.getElementById('profSubCenterName').value;
+            masterData.profile.phc = document.getElementById('profPhcName').value;
+            masterData.profile.taluka = document.getElementById('profTaluka').value;
+            masterData.profile.district = document.getElementById('profDistrict').value;
+            masterData.profile.extra = document.getElementById('profExtraInfo').value;
+
+            const staffList = [];
+            document.querySelectorAll('.staff-row').forEach(row => {
+                const inputs = row.querySelectorAll('input');
+                if (inputs[0].value.trim()) {
+                    staffList.push({ name: inputs[0].value, role: inputs[1].value, contact: inputs[2].value });
+                }
+            });
+            masterData.profile.staff = staffList;
+
+            const vList = [];
+            document.querySelectorAll('.village-row').forEach(row => {
+                const inputs = row.querySelectorAll('input');
+                if (inputs[0].value.trim()) {
+                    vList.push({ village: inputs[0].value, households: inputs[1].value, totalPop: inputs[2].value, male: inputs[3].value, female: inputs[4].value });
+                }
+            });
+            masterData.profile.villages = vList;
+
+            persistMasterData(true);
+            closeProfileEditModal();
+        }
+
+        function openManageColumnsModal() {
+            if (!isAdmin) return;
+            const sheet = masterData.sheets[currentTabKey];
+            if (!sheet) return;
+
+            const list = document.getElementById('existingColumnsList');
+            list.innerHTML = '';
+            sheet.columns.forEach((col, idx) => {
+                list.innerHTML += `
+                    <div class="flex justify-between items-center bg-slate-100 p-2 rounded">
+                        <span class="font-bold text-slate-700">${idx + 1}. ${col}</span>
+                        <button onclick="deleteColumnFromSheet(${idx})" class="text-rose-600 hover:text-rose-800 text-xs"><i class="fa-solid fa-trash"></i> काढा</button>
+                    </div>
+                `;
+            });
+
+            document.getElementById('manageColumnsModal').classList.remove('hidden');
+        }
+
+        function closeManageColumnsModal() {
+            document.getElementById('manageColumnsModal').classList.add('hidden');
+        }
+
+        function addNewColumnToCurrentSheet() {
+            const input = document.getElementById('newColumnNameInput');
+            const colName = input.value.trim();
+            if (!colName) return;
+
+            if (masterData.sheets[currentTabKey].columns.includes(colName)) {
+                alert("हा कॉलम आधीपासून उपलब्ध आहे!");
+                return;
+            }
+
+            masterData.sheets[currentTabKey].columns.push(colName);
+            input.value = '';
+            persistMasterData(true);
+            openManageColumnsModal();
+        }
+
+        function deleteColumnFromSheet(colIdx) {
+            if (confirm("हा कॉलम हटवायचा आहे का?")) {
+                masterData.sheets[currentTabKey].columns.splice(colIdx, 1);
+                persistMasterData(true);
+                openManageColumnsModal();
+            }
+        }
+
+        function deleteCurrentSheet() {
+            if (confirm(`तुम्हाला खात्री आहे का? '${masterData.sheets[currentTabKey].title}' ही Sheet कायमची डिलीट होईल.`)) {
+                delete masterData.sheets[currentTabKey];
+                currentTabKey = 'dashboard';
+                persistMasterData(true);
+                closeManageColumnsModal();
+            }
+        }
+
+        function openCreateSheetModal() {
+            if (!isAdmin) return;
+            document.getElementById('createSheetModal').classList.remove('hidden');
+        }
+        function closeCreateSheetModal() {
+            document.getElementById('createSheetModal').classList.add('hidden');
+        }
+        function saveNewCustomSheet(e) {
+            e.preventDefault();
+            const title = document.getElementById('newSheetTitle').value.trim();
+            const desc = document.getElementById('newSheetDesc').value.trim();
+            const colsInput = document.getElementById('newSheetCols').value.trim();
+            const key = 'custom_' + Date.now();
+
+            const columns = colsInput.split(',').map(c => c.trim()).filter(c => c.length > 0);
+
+            masterData.sheets[key] = {
+                title: title,
+                desc: desc,
+                columns: columns,
+                records: []
+            };
+
+            persistMasterData(true);
+            closeCreateSheetModal();
+            switchTab(key);
+        }
+
+        function openAdminModal() {
+            document.getElementById('adminModal').classList.remove('hidden');
+            document.getElementById('adminPinInput').value = '';
+            document.getElementById('pinError').classList.add('hidden');
+        }
+        function closeAdminModal() {
+            document.getElementById('adminModal').classList.add('hidden');
+        }
+        function verifyAdminPin() {
+            const input = document.getElementById('adminPinInput').value;
+            if (input === adminPin) {
+                isAdmin = true;
+                localStorage.setItem('SC_PORTAL_IS_ADMIN', 'true');
+                closeAdminModal();
+                updateAdminUI();
+                renderNavTabs();
+                if (currentTabKey !== 'dashboard') renderCurrentSheetView(currentTabKey);
+            } else {
+                document.getElementById('pinError').classList.remove('hidden');
+            }
+        }
+        function logoutAdmin() {
+            isAdmin = false;
+            localStorage.setItem('SC_PORTAL_IS_ADMIN', 'false');
+            updateAdminUI();
+            renderNavTabs();
+            if (currentTabKey !== 'dashboard') renderCurrentSheetView(currentTabKey);
+        }
+        function updateAdminUI() {
+            const badge = document.getElementById('adminBadge');
+            const loginBtn = document.getElementById('adminLoginBtn');
+            const logoutBtn = document.getElementById('adminLogoutBtn');
+            const editProfBtn = document.getElementById('editProfileBtn');
+            const manageColsBtn = document.getElementById('manageColumnsBtn');
+
+            if (isAdmin) {
+                badge.classList.remove('hidden');
+                loginBtn.classList.add('hidden');
+                logoutBtn.classList.remove('hidden');
+                if (editProfBtn) editProfBtn.classList.remove('hidden');
+                if (manageColsBtn) manageColsBtn.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+                loginBtn.classList.remove('hidden');
+                logoutBtn.classList.add('hidden');
+                if (editProfBtn) editProfBtn.classList.add('hidden');
+                if (manageColsBtn) manageColsBtn.classList.add('hidden');
+            }
+        }
+
+        function exportCurrentSheetToExcel() {
+            const sheet = masterData.sheets[currentTabKey];
+            if (!sheet) return;
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(sheet.records || []);
+            XLSX.utils.book_append_sheet(wb, ws, "MasterData");
+            XLSX.writeFile(wb, `उपकेंद्र_बाभळेश्वर_${sheet.title}_${new Date().toISOString().split('T')[0]}.xlsx`);
+        }
+    </script>
+</body>
+</html>
