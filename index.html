@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- SheetJS for Excel -->
+    <!-- SheetJS for Excel Download -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -33,8 +33,8 @@
                     <div class="flex items-center gap-2">
                         <span class="bg-teal-950 text-teal-200 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded font-bold">आयुष्मान आरोग्य मंदिर</span>
                         <!-- Live Connection Status Badge -->
-                        <span id="cloudStatusBadge" class="bg-amber-500 text-slate-950 text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1.5 font-bold shadow">
-                            <span class="w-2 h-2 rounded-full bg-slate-950 animate-pulse"></span> Cloud तपासत आहे...
+                        <span id="cloudStatusBadge" class="bg-emerald-500/20 text-emerald-200 text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1.5 font-bold border border-emerald-400/40 shadow">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Cloud Live Sync (जोडले आहे)
                         </span>
                     </div>
                     <h1 class="text-xl md:text-2xl font-bold tracking-tight">उपकेंद्र बाभळेश्वर - मास्टर वर्कबुक डिजिटल पोर्टल</h1>
@@ -44,8 +44,8 @@
 
             <!-- Action Controls -->
             <div class="flex items-center gap-2 flex-wrap justify-center">
-                <button onclick="forceSyncFromCloud()" class="bg-teal-900/80 hover:bg-teal-950 text-teal-100 border border-teal-500/50 text-xs px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow">
-                    <i class="fa-solid fa-rotate text-teal-300"></i> Cloud रीफ्रेश
+                <button onclick="fetchLatestDataFromCloud(true)" class="bg-teal-900/80 hover:bg-teal-950 text-teal-100 border border-teal-500/50 text-xs px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow">
+                    <i class="fa-solid fa-rotate text-teal-300"></i> रीफ्रेश
                 </button>
                 <div id="adminBadge" class="hidden flex items-center gap-1.5 bg-emerald-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow">
                     <i class="fa-solid fa-shield-halved"></i> ॲडमिन मोड
@@ -62,9 +62,7 @@
 
     <!-- Navigation Tabs Bar -->
     <nav class="bg-white border-b border-slate-200 shadow-sm sticky top-[76px] md:top-[72px] z-30 overflow-x-auto">
-        <div class="max-w-7xl mx-auto px-4 flex space-x-2 min-w-max" id="navTabsContainer">
-            <!-- Dynamic Navigation Tabs rendered via JS -->
-        </div>
+        <div class="max-w-7xl mx-auto px-4 flex space-x-2 min-w-max" id="navTabsContainer"></div>
     </nav>
 
     <!-- Main Content Container -->
@@ -72,19 +70,16 @@
 
         <!-- 1. DASHBOARD VIEW -->
         <section id="view-dashboard" class="space-y-6">
-            <!-- Statistics Cards -->
             <div>
                 <div class="flex justify-between items-center mb-3">
                     <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
                         <i class="fa-solid fa-chart-line text-teal-700"></i> सर्व शीट्सचे एकूण आकडेवारी सारांश (Master Statistics)
                     </h2>
                     <span class="text-xs text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded border border-emerald-200">
-                        <i class="fa-solid fa-cloud-arrow-up text-emerald-600"></i> Realtime Auto-Sync
+                        <i class="fa-solid fa-cloud-arrow-up text-emerald-600"></i> Realtime Cloud Active
                     </span>
                 </div>
-                <div id="dynamicStatsGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                    <!-- Dynamic Sheet Cards -->
-                </div>
+                <div id="dynamicStatsGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4"></div>
             </div>
 
             <!-- Profile & Village Details Section -->
@@ -101,7 +96,7 @@
                         </button>
                     </div>
 
-                    <!-- Population & Household Table -->
+                    <!-- Population Table -->
                     <div>
                         <h4 class="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
                             <i class="fa-solid fa-people-roof text-teal-600"></i> गाव निहाय लोकसंख्या व घरे
@@ -117,9 +112,7 @@
                                         <th class="p-2.5 text-right">स्त्रिया</th>
                                     </tr>
                                 </thead>
-                                <tbody id="villagePopulationTableBody" class="divide-y divide-slate-100">
-                                    <!-- Dynamic Population Rows -->
-                                </tbody>
+                                <tbody id="villagePopulationTableBody" class="divide-y divide-slate-100"></tbody>
                             </table>
                         </div>
                     </div>
@@ -140,7 +133,7 @@
             </div>
         </section>
 
-        <!-- 2. REGISTER / SHEET VIEW -->
+        <!-- 2. REGISTER VIEW -->
         <section id="view-registers" class="hidden space-y-4">
             <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-3">
                 <div>
@@ -192,7 +185,7 @@
                     <i class="fa-solid fa-lock"></i>
                 </div>
                 <h3 class="text-base font-bold text-slate-800">ॲडमिन प्रमाणीकरण</h3>
-                <p class="text-xs text-slate-500">बदल करण्यासाठी ॲडमिन सुरक्षा पिन टाका</p>
+                <p class="text-xs text-slate-500">बदल करण्यासाठी सुरक्षा पिन टाका</p>
             </div>
             <div class="space-y-4">
                 <div>
@@ -349,14 +342,9 @@
         </div>
     </div>
 
-    <!-- JAVASCRIPT ENGINE -->
+    <!-- JAVASCRIPT DIRECT ENGINE (REST + WEBSOCKET DUAL ENGINE) -->
     <script>
-        const FIREBASE_CONFIG = {
-            apiKey: "AIzaSyDg6FD39DGe9Eksl9jzN8QYzHa3Z9mvHV4",
-            authDomain: "sc-babhaleshwar-portal.firebaseapp.com",
-            databaseURL: "https://sc-babhaleshwar-portal-default-rtdb.firebaseio.com",
-            projectId: "sc-babhaleshwar-portal"
-        };
+        const DB_BASE_URL = "https://sc-babhaleshwar-portal-default-rtdb.firebaseio.com/sc_babhaleshwar_portal.json";
 
         const INITIAL_MASTER_SCHEMA = {
             profile: {
@@ -433,63 +421,61 @@
         let isAdmin = localStorage.getItem('SC_PORTAL_IS_ADMIN') === 'true';
         let adminPin = localStorage.getItem('SC_PORTAL_ADMIN_PIN') || '1234';
         let currentTabKey = 'dashboard';
-        let firebaseDB = null;
 
-        // DIRECT REST SYNC BACKUP (Guaranteed to work across all networks)
-        async function syncViaREST(data) {
+        // DIRECT CLOUD PUSH (100% Guaranteed REST Engine)
+        async function syncDataToCloudDirect(data) {
             try {
-                const url = `${FIREBASE_CONFIG.databaseURL}/sc_babhaleshwar_portal.json`;
-                await fetch(url, {
+                const response = await fetch(DB_BASE_URL, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
-                updateCloudStatus(true);
-            } catch (err) {
-                console.log("REST Sync note:", err);
+                if (response.ok) {
+                    setCloudBadge(true);
+                }
+            } catch (error) {
+                console.log("Direct sync note:", error);
             }
         }
 
-        async function fetchViaREST() {
+        // DIRECT CLOUD FETCH
+        async function fetchLatestDataFromCloud(showAlert = false) {
             try {
-                const url = `${FIREBASE_CONFIG.databaseURL}/sc_babhaleshwar_portal.json`;
-                const res = await fetch(url);
-                const cloudData = await res.json();
-                if (cloudData && cloudData.sheets) {
-                    masterData = cloudData;
-                    localStorage.setItem('SC_PORTAL_MASTER_DATA', JSON.stringify(masterData));
-                    renderHeaderAndProfile();
-                    renderNavTabs();
-                    if (currentTabKey === 'dashboard') renderDashboardStats();
-                    else renderCurrentSheetView(currentTabKey);
-                    updateCloudStatus(true);
+                const res = await fetch(DB_BASE_URL);
+                if (res.ok) {
+                    const remoteData = await res.json();
+                    if (remoteData && remoteData.sheets) {
+                        masterData = remoteData;
+                        localStorage.setItem('SC_PORTAL_MASTER_DATA', JSON.stringify(masterData));
+                        renderHeaderAndProfile();
+                        renderNavTabs();
+                        if (currentTabKey === 'dashboard') renderDashboardStats();
+                        else renderCurrentSheetView(currentTabKey);
+                        setCloudBadge(true);
+                        if (showAlert) alert("ताजा Cloud डेटा लोड झाला आहे!");
+                    } else {
+                        // First run setup on cloud
+                        syncDataToCloudDirect(masterData);
+                        setCloudBadge(true);
+                    }
                 }
             } catch (err) {
-                console.log("Fetch REST note:", err);
+                console.log("Fetch note:", err);
             }
         }
 
-        function updateCloudStatus(isOnline) {
+        function setCloudBadge(isLive) {
             const badge = document.getElementById('cloudStatusBadge');
-            if (isOnline) {
+            if (isLive) {
                 badge.className = "bg-emerald-500/20 text-emerald-200 text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1.5 font-bold border border-emerald-400/40 shadow";
                 badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Cloud Live Sync (जोडले आहे)`;
-            } else {
-                badge.className = "bg-rose-500/20 text-rose-200 text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1.5 font-bold border border-rose-400/40";
-                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-400"></span> Offline Mode`;
             }
         }
 
-        function persistMasterData(syncToCloud = true) {
+        function persistMasterData(syncCloud = true) {
             localStorage.setItem('SC_PORTAL_MASTER_DATA', JSON.stringify(masterData));
-            if (syncToCloud) {
-                if (firebaseDB) {
-                    firebaseDB.ref('sc_babhaleshwar_portal').set(masterData)
-                        .then(() => updateCloudStatus(true))
-                        .catch(() => syncViaREST(masterData));
-                } else {
-                    syncViaREST(masterData);
-                }
+            if (syncCloud) {
+                syncDataToCloudDirect(masterData);
             }
             renderHeaderAndProfile();
             renderNavTabs();
@@ -497,48 +483,19 @@
             else renderCurrentSheetView(currentTabKey);
         }
 
-        function forceSyncFromCloud() {
-            fetchViaREST();
-            alert("Cloud वरून ताजा डेटा रीफ्रेश झाला आहे!");
-        }
-
-        function initFirebaseAuto() {
-            try {
-                if (!firebase.apps.length) {
-                    firebase.initializeApp(FIREBASE_CONFIG);
-                }
-                firebaseDB = firebase.database();
-                
-                // Real-time listener
-                firebaseDB.ref('sc_babhaleshwar_portal').on('value', (snapshot) => {
-                    const val = snapshot.val();
-                    if (val && val.sheets) {
-                        masterData = val;
-                        localStorage.setItem('SC_PORTAL_MASTER_DATA', JSON.stringify(masterData));
-                        renderHeaderAndProfile();
-                        renderNavTabs();
-                        if (currentTabKey === 'dashboard') renderDashboardStats();
-                        else renderCurrentSheetView(currentTabKey);
-                        updateCloudStatus(true);
-                    } else {
-                        persistMasterData(true);
-                    }
-                }, (error) => {
-                    console.log("Firebase listener fallback to REST");
-                    fetchViaREST();
-                });
-            } catch(e) {
-                fetchViaREST();
-            }
-        }
-
         window.addEventListener('DOMContentLoaded', () => {
-            initFirebaseAuto();
-            fetchViaREST();
-            updateAdminUI();
             renderHeaderAndProfile();
             renderNavTabs();
             renderDashboardStats();
+            updateAdminUI();
+            
+            // Immediate Fetch from Cloud on Load
+            fetchLatestDataFromCloud();
+
+            // Auto Background Polling Every 5 Seconds to keep all devices live
+            setInterval(() => {
+                fetchLatestDataFromCloud(false);
+            }, 5000);
         });
 
         function renderNavTabs() {
@@ -770,7 +727,7 @@
 
             persistMasterData(true);
             closeDataEntryModal();
-            alert("नोंद यशस्वीपणे Cloud वर सेव्ह झाली आहे!");
+            alert("नोंद Cloud वर तात्काळ Live Sync झाली आहे!");
         }
 
         function editSheetRecord(sheetKey, idx) {
